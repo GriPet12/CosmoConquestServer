@@ -5,12 +5,13 @@ class DatabaseConnection {
 
     private function __construct()
     {
-        $host = 'localhost';
-        $dbname = 'cosmo_conquest';
-        $user = 'postgres';
-        $password = 'password';
-        $port = 5432; // типовий порт для PostgreSQL
-
+		$db_url = parse_url(getenv("DATABASE_URL"));
+        
+		$host = $db_url["host"] ?? 'localhost';
+		$port = $db_url["port"] ?? 5432;
+		$dbname = ltrim($db_url["path"] ?? 'cosmo_conquest', '/');
+		$user = $db_url["user"] ?? 'postgres';
+		$password = $db_url["pass"] ?? 'password';
 		try {
 			$dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
 			
@@ -43,6 +44,6 @@ class DatabaseConnection {
  }
 
  // Закриваємо можливість клонування
- private function __clone() {}
- public function __wakeup() {} // Змінено на public
+private function __clone() {}
+public function __wakeup() {} // Змінено на public
 }
