@@ -19,8 +19,41 @@ try {
 
         $newGamesCreated = 0;
         
+        $pdo->beginTransaction();
+        
+        try {
+            foreach ($activePlayers as $player) {
+                $stmt = $pdo->prepare("SELECT id FROM games 
+                                      WHERE player_id = :player_id 
+                                      AND status IN ('in_progress', 'send', 'ok')
+                                      ORDER BY id");
+                $stmt->execute(['player_id' => $player['player_id']]);
+                $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                if (count($games) > 1) {
+                    $keepId = $games[0]['id'];
+                    
+                    $stmt = $pdo->prepare("DELETE FROM games 
+                                          WHERE player_id = :player_id 
+                                          AND id != :keep_id 
+                                          AND status IN ('in_progress', 'send', 'ok')");
+                    $stmt->execute([
+                        'player_id' => $player['player_id'],
+                        'keep_id' => $keepId
+                    ]);
+                }
+            }
+            
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        
         foreach ($activePlayers as $player) {
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM games WHERE player_id = :player_id AND status IN ('in_progress', 'send', 'ok')");
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM games 
+                                  WHERE player_id = :player_id 
+                                  AND status IN ('in_progress', 'send', 'ok')");
             $stmt->execute(['player_id' => $player['player_id']]);
             $playerHasActiveGame = $stmt->fetchColumn() > 0;
             
