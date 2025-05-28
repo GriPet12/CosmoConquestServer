@@ -18,19 +18,16 @@ try {
         $activePlayers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $newGamesCreated = 0;
+        
         foreach ($activePlayers as $player) {
-            $checkStmt = $pdo->prepare('SELECT COUNT(*) FROM games WHERE player_id = :player_id AND status = :status');
-            $checkStmt->bindParam(':player_id', $player['player_id'], PDO::PARAM_INT);
-            $status = 'in_progress';
-            $checkStmt->bindParam(':status', $status, PDO::PARAM_STR);
-            $checkStmt->execute();
-
-            // Only create a new game if the player doesn't have an in-progress game
-            if ($checkStmt->fetchColumn() == 0) {
-                $stmt = $pdo->prepare('INSERT INTO games (player_id, kronus, lyrion, mystara, eclipsia, fiora, score)
-                               VALUES (:player_id, 0, 0, 0, 0, 0, 0)');
-                $stmt->bindParam(':player_id', $player['player_id'], PDO::PARAM_INT);
-                $stmt->execute();
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM games WHERE player_id = :player_id AND status IN ('in_progress', 'send', 'ok')");
+            $stmt->execute(['player_id' => $player['player_id']]);
+            $playerHasActiveGame = $stmt->fetchColumn() > 0;
+            
+            if (!$playerHasActiveGame) {
+                $stmt = $pdo->prepare('INSERT INTO games (player_id, kronus, lyrion, mystara, eclipsia, fiora, score, status)
+                                       VALUES (:player_id, 0, 0, 0, 0, 0, 0, \'in_progress\')');
+                $stmt->execute(['player_id' => $player['player_id']]);
                 $newGamesCreated++;
             }
         }
